@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+   <modelVersion>4.0.0</modelVersion>
+   <parent>
+      <artifactId>modules</artifactId>
+      <groupId>net.sourceforge.ondex</groupId>
+      <version>1.2.1-SNAPSHOT</version>
+   </parent>
+   <groupId>net.sourceforge.ondex.modules</groupId>
+   <artifactId>neo4j-converter-test</artifactId>
+
+   <name>neo4j test converter</name>
+   <description></description>
+   
+ 	 <developers>
+	   <developer>
+		   <name>Marco Brandizi</name>
+			 <url>https://github.com/marco-brandizi</url>
+		 </developer>
+	 </developers>
+   
+   <dependencies>
+         
+			<dependency>
+				<artifactId>api</artifactId>
+			  <groupId>net.sourceforge.ondex.core</groupId>
+			  <version>${project.version}</version>
+		    <scope>provided</scope>   		  
+			</dependency>
+      
+      <dependency>
+        <groupId>net.sourceforge.ondex.core</groupId>
+        <artifactId>workflow-api</artifactId>
+        <version>${project.version}</version>
+        <scope>provided</scope>
+      </dependency>
+
+      <dependency>
+         <groupId>net.sourceforge.ondex.core</groupId>
+         <artifactId>memory</artifactId>
+         <version>${project.version}</version>
+      </dependency>
+            
+      <dependency>
+         <groupId>log4j</groupId>
+         <artifactId>log4j</artifactId>
+         <scope>provided</scope>
+      </dependency>
+            			      
+			<dependency>
+				<groupId>org.neo4j.driver</groupId>
+				<artifactId>neo4j-java-driver</artifactId>
+				<version>1.4.4</version>
+			</dependency>            			      
+            	
+			<dependency>
+				<groupId>org.apache.commons</groupId>
+				<artifactId>commons-text</artifactId>
+				<version>1.1</version>
+			</dependency>
+
+   </dependencies>
+   
+   <build>
+   
+      <plugins>
+      
+			  <plugin>
+			    <groupId>org.apache.maven.plugins</groupId>
+			    <artifactId>maven-surefire-plugin</artifactId>
+			    <version>2.20</version>			    
+			    <configuration>
+			      <properties>
+			        <property>
+			        	<!-- Prints out spaces and test name before/after every test method and automatically -->
+			          <name>listener</name>
+			          <value>uk.ac.ebi.utils.test.junit.TestOutputDecorator</value>			          
+			        </property>
+			       </properties>
+             <forkMode>always</forkMode>
+             <forkCount>1</forkCount>
+             <!-- We use this with certain demanding tests (eg, WholeGoLoadingTest) -->
+             <forkedProcessTimeoutInSeconds>1800</forkedProcessTimeoutInSeconds>
+             <argLine>-Xms2G -Xmx12G -Dondex.dir=/tmp</argLine>             
+			    </configuration>
+			  </plugin>
+      
+      
+        <plugin>
+	        <artifactId>maven-assembly-plugin</artifactId>
+	        <version>${maven.assembly.plugin.version}</version>
+	        <executions>
+	        	<!-- This comes from the parent and it's replaced with the assembly-bundle execution -->
+						<execution>
+							<id>make-assembly-packaged_with_jars</id>
+							<phase />
+						</execution>    
+	             
+						<execution>
+						  <id>assembly-bundle</id>
+						  <phase>package</phase>
+						  <goals>
+						     <goal>attached</goal>
+						  </goals>
+						  <configuration>
+						     <descriptors>
+						     	<descriptor>src/main/assembly/bundle.xml</descriptor>
+						     </descriptors>
+						  </configuration>
+						</execution>
+	        </executions>
+        </plugin>
+				         
+      </plugins>
+
+   </build>
+   
+   <repositories>
+			<repository>
+				<id>marcobrandizi.info</id>
+				<url>http://www.marcobrandizi.info:8081/artifactory/maven</url>
+				<releases><enabled>true</enabled></releases>
+				<snapshots><enabled>true</enabled></snapshots>
+			</repository>
+   </repositories>   
+
+</project>
