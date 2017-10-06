@@ -21,6 +21,37 @@
 		 </developer>
 	 </developers>
    
+   <dependencyManagement>
+   		<dependencies>
+				<dependency>
+					<groupId>org.apache.lucene</groupId>
+					<artifactId>lucene-analyzers-common</artifactId>
+					<version>5.5.0</version>
+				</dependency>							
+				<dependency>
+					<groupId>org.apache.lucene</groupId>
+					<artifactId>lucene-backward-codecs</artifactId>
+					<version>5.5.0</version>
+				</dependency>							
+				<dependency>
+					<groupId>org.apache.lucene</groupId>
+					<artifactId>lucene-core</artifactId>
+					<version>5.5.0</version>
+				</dependency>							
+				<dependency>
+					<groupId>org.apache.lucene</groupId>
+					<artifactId>lucene-codecs</artifactId>
+					<version>5.5.0</version>
+				</dependency>				
+				<dependency>
+					<groupId>org.apache.lucene</groupId>
+					<artifactId>lucene-queryparser</artifactId>
+					<version>5.5.0</version>
+				</dependency>
+			</dependencies>      
+   </dependencyManagement>
+   
+   
    <dependencies>
          
 			<dependency>
@@ -48,18 +79,96 @@
          <artifactId>log4j</artifactId>
          <scope>provided</scope>
       </dependency>
-            			      
-			<dependency>
-				<groupId>org.neo4j.driver</groupId>
-				<artifactId>neo4j-java-driver</artifactId>
-				<version>1.4.4</version>
-			</dependency>            			      
-            	
+            			                  	
 			<dependency>
 				<groupId>org.apache.commons</groupId>
 				<artifactId>commons-text</artifactId>
 				<version>1.1</version>
 			</dependency>
+			
+			<dependency>
+				<groupId>org.neo4j.driver</groupId>
+				<artifactId>neo4j-java-driver</artifactId>
+				<version>1.4.4</version>
+			</dependency>            			      
+			
+			<dependency>
+			  <groupId>org.neo4j</groupId>
+			  <artifactId>neo4j</artifactId>
+			  <version>3.2.5</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.apache.lucene</groupId>
+				<artifactId>lucene-analyzers-common</artifactId>
+			</dependency>							
+			<dependency>
+				<groupId>org.apache.lucene</groupId>
+				<artifactId>lucene-backward-codecs</artifactId>
+			</dependency>							
+			<dependency>
+				<groupId>org.apache.lucene</groupId>
+				<artifactId>lucene-core</artifactId>
+			</dependency>							
+			<dependency>
+				<groupId>org.apache.lucene</groupId>
+				<artifactId>lucene-codecs</artifactId>
+			</dependency>				
+			<dependency>
+				<groupId>org.apache.lucene</groupId>
+				<artifactId>lucene-queryparser</artifactId>
+			</dependency>
+													
+
+			<dependency>
+				<groupId>org.apache.lucene</groupId>
+				<artifactId>lucene-analyzers-common</artifactId>
+				<version>6.6.0</version>
+				<scope>provided</scope>
+			</dependency>							
+			<dependency>
+				<groupId>org.apache.lucene</groupId>
+				<artifactId>lucene-backward-codecs</artifactId>
+				<version>6.6.0</version>
+				<scope>provided</scope>
+			</dependency>							
+			<dependency>
+				<groupId>org.apache.lucene</groupId>
+				<artifactId>lucene-core</artifactId>
+				<version>6.6.0</version>
+				<scope>provided</scope>
+			</dependency>							
+			<dependency>
+				<groupId>org.apache.lucene</groupId>
+				<artifactId>lucene-codecs</artifactId>
+				<version>6.6.0</version>
+				<scope>provided</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.lucene</groupId>
+				<artifactId>lucene-queryparser</artifactId>
+				<version>6.6.0</version>
+				<scope>provided</scope>
+			</dependency>
+
+							
+			<!--  dependency>
+				<groupId>org.apache.lucene</groupId>
+				<artifactId>lucene-backward-codecs</artifactId>
+				<version>6.6.0</version>
+			</dependency -->							
+			
+			<!-- dependency>
+			  <groupId>org.neo4j</groupId>
+			  <artifactId>neo4j-kernel</artifactId>
+			  <version>3.2.5</version>
+			</dependency>			
+
+			<dependency>
+			  <groupId>org.neo4j</groupId>
+			  <artifactId>neo4j-lucene-index</artifactId>
+			  <version>3.2.5</version>
+			</dependency -->
 
    </dependencies>
    
@@ -97,13 +206,22 @@
 							<id>make-assembly-packaged_with_jars</id>
 							<phase />
 						</execution>    
+
+						<execution>
+							<id>my_jar</id>
+						  <phase>package</phase>
+						  <goals><goal>attached</goal></goals>
+						  <configuration>
+						     <descriptors>
+						     	<descriptor>src/main/assembly/my_jar_with_deps.xml</descriptor>
+						     </descriptors>
+						  </configuration>
+						</execution>    
 	             
 						<execution>
 						  <id>assembly-bundle</id>
 						  <phase>package</phase>
-						  <goals>
-						     <goal>attached</goal>
-						  </goals>
+						  <goals><goal>attached</goal></goals>
 						  <configuration>
 						     <descriptors>
 						     	<descriptor>src/main/assembly/bundle.xml</descriptor>

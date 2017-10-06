@@ -7,7 +7,9 @@
 	This is different from the usual approach to pack everything in a single jar, and we need a different way due to 
 	files with the same name that clash.  
  -->
-<assembly>
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.0.0 http://maven.apache.org/xsd/assembly-2.0.0.xsd">
+  
   <id>bundle</id>
   
   <formats>
@@ -23,6 +25,15 @@
 		  <outputDirectory>/lib</outputDirectory>
 		  <unpack>false</unpack>
 		  <scope>runtime</scope>
+		  <excludes>
+		  	<exclude>${project.groupId}:${project.artifactId}:*</exclude>
+		  	<!--  exclude>org.apache.lucene:lucene-analyzers-common:jar:5.5.0</exclude>
+			  <exclude>org.apache.lucene:lucene-backward-codecs:jar:5.5.0</exclude>
+			  <exclude>org.apache.lucene:lucene-core:jar:5.5.0</exclude>
+			  <exclude>org.apache.lucene:lucene-codecs:jar:5.5.0</exclude>
+			  <exclude>org.apache.lucene:lucene-queryparser:jar:5.5.0</exclude>
+			  <exclude>org.neo4j.*</exclude -->
+		  </excludes>
 		</dependencySet>
 	</dependencySets> 
 	
@@ -34,7 +45,16 @@
 			<directoryMode>0755</directoryMode>      
 			<outputDirectory></outputDirectory>
 			<filtered>true</filtered>
+		</fileSet>
+		<fileSet>
+			<filtered>false</filtered>
+			<directory>target</directory>
+			<outputDirectory>/plugins</outputDirectory>
+			<includes>
+				<include>neo4j-converter-test-1.2.1-SNAPSHOT.jar</include>
+			</includes>
 		</fileSet>	
 	</fileSets>
+	
 
 </assembly>

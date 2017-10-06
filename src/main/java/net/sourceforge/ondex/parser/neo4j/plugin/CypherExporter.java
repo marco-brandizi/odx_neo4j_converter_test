@@ -32,7 +32,7 @@ import net.sourceforge.ondex.parser.ONDEXParser;
 
 
 /**
- * A rough Neo4j test exporter.
+ * A rough Neo4j test exporter, using Cypher.
  *
  * @author brandizi
  * <dl><dt>Date:</dt><dd>4 Oct 2017</dd></dl>
@@ -45,13 +45,13 @@ public class CypherExporter extends ONDEXExport
 	@Override
 	public String getId ()
 	{
-		return "cypherParser";
+		return "cypherExporter";
 	}
 
 	@Override
 	public String getName ()
 	{
-		return "Cypher/Neo4J Parser";
+		return "Neo4J Exporter, based on Cypher";
 	}
 
 	@Override
