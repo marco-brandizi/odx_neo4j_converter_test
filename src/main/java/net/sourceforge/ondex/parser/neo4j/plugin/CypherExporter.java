@@ -1,34 +1,19 @@
 package net.sourceforge.ondex.parser.neo4j.plugin;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.Set;
 
-import org.apache.commons.lang3.StringEscapeUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.neo4j.driver.v1.AuthTokens;
-import org.neo4j.driver.v1.Driver;
-import org.neo4j.driver.v1.GraphDatabase;
 import org.neo4j.driver.v1.Session;
-import org.neo4j.driver.v1.Transaction;
-import org.neo4j.driver.v1.exceptions.ClientException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import net.sourceforge.ondex.args.ArgumentDefinition;
-import net.sourceforge.ondex.args.StringArgumentDefinition;
-import net.sourceforge.ondex.args.URLArgumentDefinition;
 import net.sourceforge.ondex.core.ConceptClass;
 import net.sourceforge.ondex.core.ConceptName;
 import net.sourceforge.ondex.core.ONDEXConcept;
-import net.sourceforge.ondex.core.ONDEXEntity;
 import net.sourceforge.ondex.core.ONDEXRelation;
 import net.sourceforge.ondex.core.RelationType;
-import net.sourceforge.ondex.export.ONDEXExport;
-import net.sourceforge.ondex.parser.ONDEXParser;
 
 
 /**
@@ -38,9 +23,19 @@ import net.sourceforge.ondex.parser.ONDEXParser;
  * <dl><dt>Date:</dt><dd>4 Oct 2017</dd></dl>
  *
  */
-public class CypherExporter extends ONDEXExport
+public class CypherExporter extends AbstractCypherExporter
 {
-	private Logger log = LoggerFactory.getLogger ( this.getClass () );
+	private static class RelationQueue
+	{
+		public RelationQueue ( String fromLabel, String toLabel ) {
+			this.fromLabel = fromLabel;
+			this.toLabel = toLabel;
+		}
+		public String fromLabel;
+		public String toLabel;
+		public List<Map<String, Object>> relsAttrs = new ArrayList<> ();
+	}
+	
 	
 	@Override
 	public String getId ()
@@ -61,171 +56,109 @@ public class CypherExporter extends ONDEXExport
 	}
 
 	@Override
-	public ArgumentDefinition<?>[] getArgumentDefinitions ()
-	{
-		return new ArgumentDefinition<?>[] {
-			new StringArgumentDefinition ( "url", "Neo4j Connection URL" , true, "", false ) 
-		};
-	}
-
-	@Override
-	public void start () throws Exception
+	protected void run ()
 	{ 
-		String url = (String) this.getArguments ().getUniqueValue ( "url" );
-		
-		Driver driver = GraphDatabase.driver( url, AuthTokens.basic( "neo4j", "graph" ) );
-		Session session = driver.session();
-				
 		int ct = 0;
-		StringBuilder stmtQueue = new StringBuilder ();
+		List<Map<String, Object>> nodesQueue = new ArrayList<> ();
 		
-		for ( ONDEXConcept concept: this.graph.getConcepts () )
-		{			
-			String id = String.valueOf ( concept.getId () );
-			String type = concept.getOfType ().getId ();
-			String name = Optional.ofNullable ( concept.getConceptName () ).map ( ConceptName::getName ).orElse ( id );
+		for ( ConceptClass cc: this.graph.getMetaData ().getConceptClasses () )
+		{
+			nodesQueue.clear ();
+			String label = cc.getId ();
 			
-			Map<String, String> attributes = getAttrs ( concept );
+			String cypherCreateNodes = "UNWIND {nodes} AS node\n" + 
+				"CREATE (n:`%s`)\n" +
+				"SET n = node";
+			
+			cypherCreateNodes = String.format ( cypherCreateNodes, label );
 
-			Map<String, String> params = new HashMap<> ();
-			params.put ( "id", id );
-			params.put ( "name", name );
-			params.putAll ( attributes );
-			
-			StringBuilder stmt = new StringBuilder ( "CREATE ( :" );
-			stmt.append ( type );
-			
-			appendParams ( stmt, params );
-			stmt.append ( " )\n" );
-			
-			this.queueCypher ( session, stmtQueue, stmt, ++ct, "concepts" );
-		}
+			for ( ONDEXConcept concept: this.graph.getConceptsOfConceptClass ( cc ) )
+			{			
+				String id = String.valueOf ( concept.getId () );
+				String name = Optional.ofNullable ( concept.getConceptName () ).map ( ConceptName::getName ).orElse ( id );
+				
+				Map<String, Object> props = getAttrs ( concept );
+
+				props.put ( "id", id );
+				props.put ( "name", name );
+	
+				nodesQueue.add ( props );
+				
+				if ( this.queueCypher ( session, cypherCreateNodes, ++ct, "nodes", nodesQueue ) )
+					nodesQueue.clear ();
+			}
+
+			// flush
+			if ( !nodesQueue.isEmpty () )
+				this.queueCypher ( true, session, cypherCreateNodes, ct += nodesQueue.size (), "nodes", nodesQueue );
 		
-		// flush the queue
-		this.queueCypher ( session, stmtQueue, null, ct, "concepts" );
+		} // for CC
 
 		
 		for ( ConceptClass cc: this.graph.getMetaData ().getConceptClasses () )
 		{
+			if ( Optional.ofNullable ( this.graph.getConceptsOfConceptClass ( cc ) ).map ( Set::size ).orElse ( 0 ) == 0 ) 
+				continue;
+			
 			String ctype = cc.getId ();
 			log.info ( "Indexing \"{}\"", ctype );
-			StringBuilder stmt = new StringBuilder ( "CREATE INDEX ON :`" + ctype + "`(id)" );
-			runCypher ( session, stmt );
+			session.run ( String.format ( "CREATE INDEX ON :`%s`(id)", ctype ) );
 		}
+
+		
+		Map<String, RelationQueue> relationsQueue = new HashMap<> ();		
+		for ( RelationType relType: this.graph.getMetaData ().getRelationTypes () )
+		{
+			relationsQueue.clear ();
+			
+			for ( ONDEXRelation rel: this.graph.getRelationsOfRelationType ( relType ) )
+			{
+				ONDEXConcept from = rel.getFromConcept ();
+				String fromLabel = from.getOfType ().getId ();
+				ONDEXConcept to = rel.getToConcept ();
+				String toLabel = to.getOfType ().getId ();
+	
+				String queueKey = fromLabel+toLabel;
+				RelationQueue queue = relationsQueue.get ( queueKey );
+				if ( queue == null ) relationsQueue.put ( queueKey, queue = new RelationQueue ( fromLabel, toLabel ) );
 				
-		ct = 0;
-		for ( ONDEXRelation rel: this.graph.getRelations () )
-		{
-			String type = rel.getOfType ().getId ();
-			ONDEXConcept from = rel.getFromConcept ();
-			ONDEXConcept to = rel.getToConcept ();
-			Map<String, String> params = getAttrs ( rel );
-			
-			StringBuilder stmt = new StringBuilder ( "MATCH ( from:" );
-			stmt.append ( from.getOfType ().getId () );
-			stmt.append ( " { id: '" ).append ( from.getId () ).append ( "'} ), " );
+				Map<String, Object> params = new HashMap<> (); 
+				params.put ( "fromId", String.valueOf ( from.getId () ) );
+				params.put ( "toId", String.valueOf ( to.getId () ) );
+				params.put ( "attributes", this.getAttrs ( rel ) );
+				
+				queue.relsAttrs.add ( params );
 
-			stmt.append ( "( to:" );
-			stmt.append ( to.getOfType ().getId () );
-			stmt.append ( " { id: '" ).append ( to.getId () ).append ( "'} ) " );
-			
-			stmt.append ( "CREATE (from) - [:" );
-			stmt.append ( type );
-						
-			appendParams ( stmt, params );
-			stmt.append ( "]" );
-			stmt.append ( " -> (to)\n"  );
+				if ( queue.relsAttrs.size () == this.bufferSize )
+					ct = this.commitRelations ( session, queue, ct, relType );
+			}
 
-			this.queueCypher ( session, stmtQueue, stmt, ++ct, "relations" );
-		}
+			// flush the queue
+			ct = this.commitRelations ( session, ct, relationsQueue, relType );
 		
-		// flush the queue		
-		this.queueCypher ( session, stmtQueue, null, ct, "relations" );
-		
-		session.close ();
-		driver.close ();
+		} // relType 
 	}
 
-
-	private void queueCypher ( Session session, StringBuilder stmtQueue, StringBuilder stmt, int counter, String itemType )
+	private int commitRelations ( Session session, int ct, Map<String, RelationQueue> queues, RelationType relType )
 	{
-		if ( stmt != null )
-		{
-			if ( stmtQueue.length () != 0 )
-				// This is how you separate multiple commands in Cypher
-				stmtQueue.append ( "WITH 0 AS foo\n" );
-
-			stmtQueue.append ( stmt );
-		}
-		
-		// null statement is for committing the still-pending statements
-		if ( stmt == null || counter % 500 == 0 )
-		{
-			this.runCypher ( session, stmtQueue );
-			log.info ( "{} {} committed", counter, itemType );
-			stmtQueue.setLength ( 0 );
-		}
-	}
-
-	
-	/**
-	 * @param session
-	 * @param stmt
-	 */
-	private void runCypher ( Session session, StringBuilder stmt )
-	{
-		String smtStr = stmt.toString ();
-		try {
-			session.run ( smtStr );
-		}
-		catch ( ClientException ex ) {
-			log.error ( String.format ( "Error \"%s\" while sending Cypher command:\n%s", ex.getMessage (), smtStr ), ex );
-		}
-	}
-
-	private Map<String, String> getAttrs ( ONDEXEntity oxe )
-	{
-		Map<String, String> attributes = Optional.ofNullable ( oxe.getAttributes () )
-		.map ( attrs ->
-		  attrs
-		  .stream ()
-		  .collect ( Collectors.toMap (
-		  	attr -> attr.getOfType ().getId (),
-		  	attr -> attr.getValue ().toString ()
-		  ))
-		)
-		.orElse ( Collections.emptyMap () );
-		
-		return attributes;
+		for ( RelationQueue queue: queues.values () )
+			ct = commitRelations ( session, queue, ct, relType );
+		return ct;
 	}
 	
-	private StringBuilder appendParams ( StringBuilder stmt, Map<String, String> params )
+	private int commitRelations ( Session session, RelationQueue queue, int ct, RelationType relType )
 	{
-		if ( params == null || params.size () == 0 ) return new StringBuilder ();
+		if ( queue.relsAttrs.size () == 0 ) return ct;
 		
-		stmt.append ( " { " );
-		String sep = null;
-		for ( Entry<String, String> e: params.entrySet () ) {
-			if ( sep != null ) stmt.append ( sep );
-			stmt.append ( "`" ).append ( e.getKey () ).append ( "`" );
-			stmt.append ( ": \"" );
-			stmt.append ( StringEscapeUtils.escapeJava ( e.getValue () ) );
-			stmt.append ( "\"" );
-			sep = ", ";
-		}
-		stmt.append ( "}" );		
-		return stmt;
-	}
-	
-	
-	@Override
-	public String[] requiresValidators ()
-	{
-		return new String [ 0 ];
-	}
-
-	@Override
-	public boolean requiresIndexedGraph() {
-		return false;
+		String cypherCreateRel = 
+			"UNWIND {relations} AS rel\n" +
+			"MATCH ( from:`%s`{ id: rel.fromId } ), ( to:`%s`{ id: rel.toId } )\n" +
+			"CREATE (from)-[r:`%s`]->(to)\n" +
+			"SET r = rel.attributes";
+		
+		cypherCreateRel = String.format ( cypherCreateRel, queue.fromLabel, queue.toLabel, relType.getId () );
+		this.queueCypher ( true, session, cypherCreateRel, ct += queue.relsAttrs.size (), "relations", queue.relsAttrs );
+		queue.relsAttrs.clear ();
+		return ct;
 	}
 }

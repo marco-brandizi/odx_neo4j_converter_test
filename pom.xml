@@ -207,7 +207,7 @@
 							<phase />
 						</execution>    
 
-						<execution>
+						<!-- execution>
 							<id>my_jar</id>
 						  <phase>package</phase>
 						  <goals><goal>attached</goal></goals>
@@ -216,7 +216,7 @@
 						     	<descriptor>src/main/assembly/my_jar_with_deps.xml</descriptor>
 						     </descriptors>
 						  </configuration>
-						</execution>    
+						</execution -->    
 	             
 						<execution>
 						  <id>assembly-bundle</id>
