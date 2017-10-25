@@ -1,10 +1,12 @@
 ## `List<String> didYouMean( keyword )`
-    base version returns an empty list, guess it's supposed to do something in the specialisations.
+
+    * base version returns an empty list, guess it's supposed to do something in the specialisations.
     * TODO: check again for real implementations
 
 ## + `displayGraphStats ()`
     * show several gross numbers, which require typical aggregation queries (count classes, count relations, etc)
-    *``` // Concepts count
+    
+		``` // Concepts count
     MATCH (c:Concept) RETURN COUNT ( DISINCT c ) AS count
     // Relations count
     MATCH ()-[r]-() RETURN COUNT ( DISINCT r ) AS count  
