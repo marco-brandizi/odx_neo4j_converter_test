@@ -4,69 +4,75 @@
     * TODO: check again for real implementations
 
 ## + `displayGraphStats ()`
-    * show several gross numbers, which require typical aggregation queries (count classes, count relations, etc)
-    
+
+    * show several gross numbers, which require typical aggregation queries (count classes, count relations, etc)    
     * Cypher:
-```// Concepts count
-    MATCH (c:Concept) RETURN COUNT ( DISINCT c ) AS count
-    // Relations count
-    MATCH ()-[r]-() RETURN COUNT ( DISINCT r ) AS count  
+```
+// Concepts count
+MATCH (c:Concept) RETURN COUNT ( DISINCT c ) AS count
+// Relations count
+MATCH ()-[r]-() RETURN COUNT ( DISINCT r ) AS count  
 ```
 
     * SPARQL
  
-``` // Concepts count
-    SELECT COUNT ( DISTINCT ?c ) AS ?count {
-      ?c a odx:Concept
-    }
-    // Relations count
-    SELECT COUNT ( DISTINCT ?r ) AS ?count {
-      ?r a odx:Property
-      ?cfrom ?r ?cto.
-    }
+```
+// Concepts count
+SELECT COUNT ( DISTINCT ?c ) AS ?count {
+  ?c a odx:Concept
+}
+// Relations count
+SELECT COUNT ( DISTINCT ?r ) AS ?count {
+  ?r a odx:Property
+  ?cfrom ?r ?cto.
+}
 ```    
 
 ## + `validateOndexKB ()`
     * check that the graph has certain node/relation types
       * should be done against a specific schema/ontology
-    * ```UNWIND [ 'Chromosome', 'Begin', 'End' ] AS myattr
-    MATCH (g:Gene) WHERE NOT myattr IN KEYS(g)
-    RETURN COUNT ( DISTINCT g ) AS errors    
-      ```
-    * ```
-      SELECT COUNT ( distinct ?g) AS ?errors {
-        ?g a odx:Gene.
-        NOT EXISTS ( ?g ?myAttr ?value ).
-        VALUES (?myAttr) { ( 'Chromosome' ),  ( 'Begin' ), ( 'End' ) }
-      }
-    ```
+    * Cypher: 
+```
+   UNWIND [ 'Chromosome', 'Begin', 'End' ] AS myattr
+   MATCH (g:Gene) WHERE NOT myattr IN KEYS(g)
+   RETURN COUNT ( DISTINCT g ) AS errors    
+```
+    * SPARQL:
+```
+   SELECT COUNT ( distinct ?g) AS ?errors {
+     ?g a odx:Gene.
+     NOT EXISTS ( ?g ?myAttr ?value ).
+     VALUES (?myAttr) { ( 'Chromosome' ),  ( 'Begin' ), ( 'End' ) }
+   }
+```
 
 ## + `indexOndexGraph()`
     * uses LuceneEnv(), typical graph indexing operations (concepts, concept classes, relations, their attributes/fields)
     * Currently, it requires full graph loading, could be done aganist a graph db as input
     * TODO: can this be done against a graph db? Would it support Lucene syntax?
     * Typical support queries:
-    ```
-    MATCH (c:Concept) RETURN c.*
-    MATCH ()-[r]-() RETURN r.*
-    ```
-    * ```
-      # For concepts
-      SELECT DISTINCT ?attrName ?attrValue {
-        ?attrProp rdf:subPropertyOf odx:attributeProperty;
-                  rdfs:label ?attrName.
-        ?c a odx:Concept.
-        ?c ?attrProp ?attrValue.
-      }
+```
+MATCH (c:Concept) RETURN c.*
+MATCH ()-[r]-() RETURN r.*
+```
 
-      # For relations
-      SELECT DISTINCT ?attrName ?attrValue {
-        ?attrProp rdf:subPropertyOf odx:attributeProperty;
-                  rdfs:label ?attrName.
-        ?r a odx:Relation.
-        ?r ?attrProp ?attrValue.
-      }
-    ```
+```
+# For concepts
+SELECT DISTINCT ?attrName ?attrValue {
+  ?attrProp rdf:subPropertyOf odx:attributeProperty;
+            rdfs:label ?attrName.
+  ?c a odx:Concept.
+  ?c ?attrProp ?attrValue.
+}
+
+# For relations
+SELECT DISTINCT ?attrName ?attrValue {
+  ?attrProp rdf:subPropertyOf odx:attributeProperty;
+            rdfs:label ?attrName.
+  ?r a odx:Relation.
+  ?r ?attrProp ?attrValue.
+}
+```
 ## `exportGraph()`
     * does the OXL export, + json export (via plugin)
 
@@ -80,17 +86,19 @@
 
 ## + Set<ONDEXConcept> searchQTLs(List<QTL> qtls)
     * search concepts of type QTL and maps them to an internal QTL structure
-    * ```
-      MATCH ( g:Gene ) RETURN g.name, g.begin, g.chromosome, g.end
-    ```
-    * ```
-      SELECT DISTINCT ?begin ?end ?chromosome {
-        ?g a odx:Gene;
-          odx:geneBegin ?begin;
-          odx:geneEnd ?end;
-          odx:chromosome ?chromosome
-      }
-    ```
+    * Cypher:
+```
+MATCH ( g:Gene ) RETURN g.name, g.begin, g.chromosome, g.end
+```
+```
+SELECT DISTINCT ?begin ?end ?chromosome {
+  ?g a odx:Gene;
+    odx:geneBegin ?begin;
+    odx:geneEnd ?end;
+    odx:chromosome ?chromosome
+}
+```
+
 ## + `Set<QTL> findQTL(String keyword)`
     * searches gene concepts over ends of relations
     * Searches via index are not affected by the backend
@@ -99,13 +107,18 @@
 ## + `Set<ONDEXConcept> searchGenes(List<String> accessions)`
     * fetches genes from the graph, based on accessions
     * TODO: we need to see how to model structured values like accessions, but roughly would be:
-    * ```MATCH (g:Gene{acc:$accession}) RETURN g;```
-    * ```SELECT DISTINCT ?g ?attr {
-      ?attrProp rdf:subPropertyOf odx:attrProp.
-      ?g a odx:Gene;
-        odx:accession $accession;
-        ?attrProp ?attr.
-    }```
+```
+MATCH (g:Gene{acc:$accession}) RETURN g;
+```
+```
+SELECT DISTINCT ?g ?attr {
+   ?attrProp rdf:subPropertyOf odx:attrProp.
+   ?g a odx:Gene;
+     odx:accession $accession;
+     ?attrProp ?attr.
+}
+```
+
 ## + `ONDEXGraph evidencePath(Integer evidenceOndexId)`
     * finds genes starting from the ID of a related concept
     * uses mapConcept2Genes to get initial concepts, then uses the graph traverser got from the
@@ -138,14 +151,18 @@
     * associates concepts to instantiated paths
     * launches traversers in parallel
     * collect results as list of evidence nodes
-    * `MATCH (start:Type{ id: $startId}) - [r1:RType1] -> (n1:NType1) ... (end:NTypeN) RETURN start, end`
-    * ```SELECT DISTINCT * {
-        ?start a Type;
-               dc:identifier $id;
-               ^odx:from ?r1.
-        ?r1 odx:to ?n1.
+```
+MATCH (start:Type{ id: $startId}) - [r1:RType1] -> (n1:NType1) ... (end:NTypeN) RETURN start, end
+```
+```
+SELECT DISTINCT * {
+  ?start a Type;
+         dc:identifier $id;
+         ^odx:from ?r1.
+  ?r1 odx:to ?n1.
 
-        ?n1 a NType1 ...
+  ?n1 a NType1 ...
 
-        ?end a NTypeN.
-      }```
+  ?end a NTypeN.
+}
+```
