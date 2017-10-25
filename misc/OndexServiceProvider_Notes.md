@@ -6,12 +6,16 @@
 ## + `displayGraphStats ()`
     * show several gross numbers, which require typical aggregation queries (count classes, count relations, etc)
     
-		``` // Concepts count
+    * Cypher:
+```// Concepts count
     MATCH (c:Concept) RETURN COUNT ( DISINCT c ) AS count
     // Relations count
     MATCH ()-[r]-() RETURN COUNT ( DISINCT r ) AS count  
-    ```
-    * ``` // Concepts count
+```
+
+    * SPARQL
+ 
+``` // Concepts count
     SELECT COUNT ( DISTINCT ?c ) AS ?count {
       ?c a odx:Concept
     }
@@ -20,7 +24,7 @@
       ?r a odx:Property
       ?cfrom ?r ?cto.
     }
-    ```    
+```    
 
 ## + `validateOndexKB ()`
     * check that the graph has certain node/relation types
