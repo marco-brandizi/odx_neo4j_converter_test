@@ -151,9 +151,11 @@ SELECT DISTINCT ?g ?attr {
     * associates concepts to instantiated paths
     * launches traversers in parallel
     * collect results as list of evidence nodes
+
 ```
 MATCH (start:Type{ id: $startId}) - [r1:RType1] -> (n1:NType1) ... (end:NTypeN) RETURN start, end
 ```
+
 ```
 SELECT DISTINCT * {
   ?start a Type;
