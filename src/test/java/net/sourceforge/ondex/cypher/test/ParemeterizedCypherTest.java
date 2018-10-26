@@ -61,7 +61,9 @@ public class ParemeterizedCypherTest
 		
 	  // Let's process this input.
 	  
-  	// Try block ensure auto-closing (http://tutorials.jenkov.com/java-exception-handling/try-with-resources.html)
+  	// The try(...){...} block ensures auto-closing
+	  // (http://tutorials.jenkov.com/java-exception-handling/try-with-resources.html)
+	  //
 	  try ( 
 	  	Driver neoDriver = GraphDatabase.driver( "bolt://127.0.0.1:7687", AuthTokens.basic( "neo4j", "test" ) );
 	  	Session neoSession = neoDriver.session();
